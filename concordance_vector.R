@@ -1,11 +1,11 @@
 library(tidyverse)
 
+# Read the data files
 scf <- read_table("scfl.cf.stat", comment = "#")
 gcf <- read_table("gcf.cf.stat", comment = "#")
 cbl <- read_table("coalescent_bl.cf.stat", comment = "#")
 
-# process the scf file
-
+# Process the scf file
 scv <- scf %>%
   rename(site_psi1 = sCF, 
          site_psi1_N = sCF_N, 
@@ -34,12 +34,12 @@ scv <- scf %>%
     quartet_psi2_pp = round(pmax(as.numeric(str_extract(Label, "(?<=pp2=)[^;]+")),
                                  as.numeric(str_extract(Label, "(?<=pp3=)[^;]+"))), 1),
     quartet_psi3_pp = round(pmin(as.numeric(str_extract(Label, "(?<=pp2=)[^;]+")),
-                                 as.numeric(str_extract(Label, "(?<=pp3=)[^;]+"))), 1)
+                                 as.numeric(str_extract(Label, "(?<=pp3=)[^;]+"))), 1),
+    quartet_N = round(as.numeric(str_extract(Label, "(?<=EN=)[^;]+")), 1)
   ) %>%
-  select(ID, site_psi1, site_psi2, site_psi3, site_psi4, site_psi1_N, site_psi2_N, site_psi3_N, site_psi4_N, site_N, quartet_psi1, quartet_psi2, quartet_psi3, quartet_psi1_N, quartet_psi2_N, quartet_psi3_N, quartet_psi1_pp, quartet_psi2_pp, quartet_psi3_pp, length_subs_per_site)
+  select(ID, site_psi1, site_psi2, site_psi3, site_psi4, site_psi1_N, site_psi2_N, site_psi3_N, site_psi4_N, site_N, quartet_psi1, quartet_psi2, quartet_psi3, quartet_psi1_N, quartet_psi2_N, quartet_psi3_N, quartet_psi1_pp, quartet_psi2_pp, quartet_psi3_pp, quartet_N, length_subs_per_site)
 
-# process the gcf file
-
+# Process the gcf file
 gcv <- gcf %>%
   rename(gene_psi1 = gCF, 
          gene_psi1_N = gCF_N, 
@@ -54,18 +54,19 @@ gcv <- gcf %>%
   ungroup() %>%
   select(ID, gene_psi1, gene_psi2, gene_psi3, gene_psi4, gene_psi1_N, gene_psi2_N, gene_psi3_N, gene_psi4_N, gene_N)
 
-# process the cbl file
+# Process the cbl file
 cbl <- cbl %>%
   rename(length_coalescent = Length) %>%
   select(ID, length_coalescent)
-  
+
+# Combine the processed data
 concordance_vectors <- scv %>%
   left_join(gcv, by = "ID") %>%
   left_join(cbl, by = "ID") %>%
   select(ID, gene_psi1, gene_psi2, gene_psi3, gene_psi4, gene_psi1_N, gene_psi2_N, gene_psi3_N, gene_psi4_N, gene_N,
          site_psi1, site_psi2, site_psi3, site_psi4, site_psi1_N, site_psi2_N, site_psi3_N, site_psi4_N, site_N,
-         quartet_psi1, quartet_psi2, quartet_psi3, quartet_psi1_N, quartet_psi2_N, quartet_psi3_N, quartet_psi1_pp, quartet_psi2_pp, quartet_psi3_pp,
+         quartet_psi1, quartet_psi2, quartet_psi3, quartet_psi1_N, quartet_psi2_N, quartet_psi3_N, quartet_N, quartet_psi1_pp, quartet_psi2_pp, quartet_psi3_pp,
          length_subs_per_site, length_coalescent)
 
+# Write to CSV
 write_csv(concordance_vectors, "concordance_vectors.csv")
-
