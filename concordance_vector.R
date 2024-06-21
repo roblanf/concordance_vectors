@@ -35,7 +35,7 @@ scv <- scf %>%
                                  as.numeric(str_extract(Label, "(?<=pp3=)[^;]+"))), 1),
     quartet_psi3_pp = round(pmin(as.numeric(str_extract(Label, "(?<=pp2=)[^;]+")),
                                  as.numeric(str_extract(Label, "(?<=pp3=)[^;]+"))), 1),
-    quartet_N = round(as.numeric(str_extract(Label, "(?<=EN=)[^;]+")), 1)
+    quartet_N = round(as.numeric(str_extract(Label, "(?<=EN=)[^\\]]+")), 1)
   ) %>%
   select(ID, site_psi1, site_psi2, site_psi3, site_psi4, site_psi1_N, site_psi2_N, site_psi3_N, site_psi4_N, site_N, quartet_psi1, quartet_psi2, quartet_psi3, quartet_psi1_N, quartet_psi2_N, quartet_psi3_N, quartet_psi1_pp, quartet_psi2_pp, quartet_psi3_pp, quartet_N, length_subs_per_site)
 
