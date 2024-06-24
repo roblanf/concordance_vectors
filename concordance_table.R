@@ -131,7 +131,7 @@ output <- create_heatmap(branch_id, concordance_vectors)
 
 # Save the plot to a PDF file
 pdf_filename <- paste0("concordance_table_", branch_id, ".pdf")
-ggsave(pdf_filename, plot = output$plot, width = 8, height = 4)
+ggsave(pdf_filename, plot = output$plot, width = 8, height = 5)
 
 # Save the long_data table to a CSV file
 csv_filename <- paste0("concordance_table_", branch_id, ".csv")
