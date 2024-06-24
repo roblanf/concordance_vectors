@@ -22,10 +22,10 @@ scv <- scf %>%
          site_psi3_N = min(sDF1_N, sDF2_N)) %>%
   ungroup() %>%
   mutate(
-    quartet_psi1 = round(as.numeric(str_extract(Label, "(?<=q1=)[^;]+")), 2),
-    quartet_psi2 = round(pmax(as.numeric(str_extract(Label, "(?<=q2=)[^;]+")),
+    quartet_psi1 = round(100 * as.numeric(str_extract(Label, "(?<=q1=)[^;]+")), 2),
+    quartet_psi2 = round(100 * pmax(as.numeric(str_extract(Label, "(?<=q2=)[^;]+")),
                               as.numeric(str_extract(Label, "(?<=q3=)[^;]+"))), 2),
-    quartet_psi3 = round(pmin(as.numeric(str_extract(Label, "(?<=q2=)[^;]+")),
+    quartet_psi3 = round(100 * pmin(as.numeric(str_extract(Label, "(?<=q2=)[^;]+")),
                               as.numeric(str_extract(Label, "(?<=q3=)[^;]+"))), 2),
     quartet_psi1_N = round(as.numeric(str_extract(Label, "(?<=f1=)[^;]+")), 2),
     quartet_psi2_N = round(pmax(as.numeric(str_extract(Label, "(?<=f2=)[^;]+")),
