@@ -109,7 +109,10 @@ create_heatmap <- function(branch_id, conc_vectors) {
             ticks.colour = "black"
         ))
     
-    return(list(plot = plot, long_data = long_data))
+    output_data <- long_data %>%
+        select(type, psi, value, lower_CI, upper_CI)
+    
+    return(list(plot = plot, data = output_data))
 }
 
 # Main script
@@ -132,4 +135,4 @@ ggsave(pdf_filename, plot = output$plot, width = 10, height = 8)
 
 # Save the long_data table to a CSV file
 csv_filename <- paste0("concordance_table_", branch_id, ".csv")
-write_csv(output$long_data, csv_filename)
+write_csv(output$data, csv_filename)
