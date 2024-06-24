@@ -12,7 +12,9 @@ scv <- scf %>%
          site_N = sN,
          length_subs_per_site = Length) %>%
   mutate(site_psi4 = 0, 
-         site_psi4_N = 0) %>%
+         site_psi4_N = 0,
+         quartet_psi4 = 0, 
+         quartet_psi4_N = 0) %>%
   rowwise() %>%
   mutate(site_psi2 = max(sDF1, sDF2),
          site_psi3 = min(sDF1, sDF2),
@@ -37,7 +39,8 @@ scv <- scf %>%
                                  as.numeric(str_extract(Label, "(?<=pp3=)[^;]+"))), 1),
     quartet_N = round(as.numeric(str_extract(Label, "(?<=EN=)[^\\]]+")), 1)
   ) %>%
-  select(ID, site_psi1, site_psi2, site_psi3, site_psi4, site_psi1_N, site_psi2_N, site_psi3_N, site_psi4_N, site_N, quartet_psi1, quartet_psi2, quartet_psi3, quartet_psi1_N, quartet_psi2_N, quartet_psi3_N, quartet_psi1_pp, quartet_psi2_pp, quartet_psi3_pp, quartet_N, length_subs_per_site)
+  select(ID, site_psi1, site_psi2, site_psi3, site_psi4, site_psi1_N, site_psi2_N, site_psi3_N, site_psi4_N, site_N, 
+        quartet_psi1, quartet_psi2, quartet_psi3, quartet_psi4, quartet_psi1_N, quartet_psi2_N, quartet_psi3_N, quartet_psi4_N, quartet_psi1_pp, quartet_psi2_pp, quartet_psi3_pp, quartet_N, length_subs_per_site)
 
 # Process the gcf file
 gcv <- gcf %>%
@@ -65,7 +68,7 @@ concordance_vectors <- scv %>%
   left_join(cbl, by = "ID") %>%
   select(ID, gene_psi1, gene_psi2, gene_psi3, gene_psi4, gene_psi1_N, gene_psi2_N, gene_psi3_N, gene_psi4_N, gene_N,
          site_psi1, site_psi2, site_psi3, site_psi4, site_psi1_N, site_psi2_N, site_psi3_N, site_psi4_N, site_N,
-         quartet_psi1, quartet_psi2, quartet_psi3, quartet_psi1_N, quartet_psi2_N, quartet_psi3_N, quartet_N, quartet_psi1_pp, quartet_psi2_pp, quartet_psi3_pp,
+         quartet_psi1, quartet_psi2, quartet_psi3, quartet_psi4, quartet_psi1_N, quartet_psi2_N, quartet_psi3_N, quartet_psi4_N, quartet_N, quartet_psi1_pp, quartet_psi2_pp, quartet_psi3_pp,
          length_subs_per_site, length_coalescent)
 
 # Write to CSV
