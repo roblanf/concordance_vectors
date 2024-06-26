@@ -4,6 +4,7 @@
 library(tidyverse)
 library(ggplot2)
 library(boot)
+library(ggtext)
 
 bootstrap_ci_counts <- function(counts) {
     
@@ -13,7 +14,7 @@ bootstrap_ci_counts <- function(counts) {
     
     count_func <- function(data, indices) {
         sample_data <- data[indices]
-        counts <- c(sum(sample_data == 1), sum(sample_data == 2), sum(sample_data == 3))
+        counts <- sapply(1:length(counts), function(x) sum(sample_data == x))
         return(counts)
     }
     
@@ -22,8 +23,8 @@ bootstrap_ci_counts <- function(counts) {
     
     # Calculate 95% confidence intervals for each category
     ci_results <- tibble(
-        lower_ci_count = apply(bootstrap_results$t, 2, quantile, probs = 0.025),
-        upper_ci_count = apply(bootstrap_results$t, 2, quantile, probs = 0.975)
+        lower_ci_count = apply(results$t, 2, quantile, probs = 0.025),
+        upper_ci_count = apply(results$t, 2, quantile, probs = 0.975)
     )
     
     return(ci_results)
@@ -42,7 +43,7 @@ create_heatmap <- function(branch_id, conc_vectors) {
         select(-ends_with("_N")) %>%
         pivot_longer(cols = everything(), names_to = "type_psi", values_to = "value") %>%
         separate(type_psi, into = c("type", "psi"), sep = "_psi") %>%
-        mutate(type = factor(type, levels = c("quartet", "site", "gene")))
+        mutate(type = factor(type, levels = c("gene", "site", "quartet")))
     
     # Reshape data from wide to long format for counts
     long_data_N <- clade_data %>%
@@ -60,7 +61,9 @@ create_heatmap <- function(branch_id, conc_vectors) {
             ci <- bootstrap_ci_counts(counts)
             ci <- ci %>%
                 mutate(lower_CI = (lower_ci_count / total_counts) * 100,
-                       upper_CI = (upper_ci_count / total_counts) * 100)
+                       upper_CI = (upper_ci_count / total_counts) * 100,
+                       total_counts = total_counts) # Add total_counts to ci
+            
             .x <- .x %>% bind_cols(ci)
             return(.x)
         }) %>%
@@ -69,12 +72,19 @@ create_heatmap <- function(branch_id, conc_vectors) {
     # Add bootstrap CIs to the long_data table in percentage terms
     long_data <- long_data %>%
         mutate(psi = paste0(psi, "_N")) %>%
-        left_join(long_data_N %>% select(type, psi_N, lower_CI, upper_CI), by = c("type", "psi" = "psi_N")) %>%
+        left_join(long_data_N %>% select(type, psi_N, lower_CI, upper_CI, total_counts), by = c("type", "psi" = "psi_N")) %>%
         mutate(psi = str_replace(psi, "_N", ""),
                main_label = scales::number(value, accuracy = 0.001),
                ci_label = paste0("(", scales::number(lower_CI, accuracy = 0.001), ", ", 
                                  scales::number(upper_CI, accuracy = 0.001), ")"))
+
+    y_labels <- long_data %>%
+        select(type, total_counts) %>%
+        distinct() %>%
+        mutate(y_label = paste0(type, "<br><span style='font-size:9pt;'>(n=", total_counts, ")</span>")) %>%
+        pull(y_label)
     
+        
     # Generate the heatmap
     plot <- ggplot(long_data, aes(x = psi, y = type, fill = value)) +
         geom_tile(color = "white") + # Add tiles with white borders
@@ -82,15 +92,19 @@ create_heatmap <- function(branch_id, conc_vectors) {
         geom_text(aes(label = ci_label), color = "black", size = 3, vjust = 1.5) + # Add CI text labels
         scale_fill_gradient(low = "white", high = "red", limits = c(0, 100), name = "proportion") + # Color gradient
         scale_x_discrete(position = 'top', labels = c(bquote(Psi[1]), bquote(Psi[2]), bquote(Psi[3]), bquote(Psi[4]))) +
+        scale_y_discrete(labels = y_labels) + 
         theme_minimal() + # Minimal theme
         ggtitle(paste("Concordance factors for branch ID", branch_id), subtitle = "Values are percentages, numbers in brackets are bootstrap 95% CIs") +
-        theme(plot.title = element_text(size = 24),
-              axis.title = element_blank(), # Remove axis titles
-              axis.text = element_text(size = 16), # Increase axis text size
-              axis.ticks = element_blank(),
-              axis.line = element_blank(),
-              line = element_blank(),
-              legend.position = "bottom") + # Place legend at the bottom
+        theme(
+            plot.title = element_text(size = 24),
+            axis.title = element_blank(), # Remove axis titles
+            axis.text.y = element_markdown(size = 16), # Use element_markdown for y-axis labels
+            axis.text.x = element_text(size = 16), # Increase x-axis text size
+            axis.ticks = element_blank(),
+            axis.line = element_blank(),
+            line = element_blank(),
+            legend.position = "bottom" # Place legend at the bottom
+        ) +
         guides(fill = guide_colourbar(
             title = "Concordance or Discordance factor (%)",
             title.position = "top",
