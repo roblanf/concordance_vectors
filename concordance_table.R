@@ -5,31 +5,25 @@ library(tidyverse)
 library(ggplot2)
 library(boot)
 
-bootstrap_ci_counts <- function(counts, R = 1000, alpha = 0.05) {
-    # Convert counts to a data frame for bootstrapping
-    data <- tibble(category = rep(1:length(counts), round(counts)))
+bootstrap_ci_counts <- function(counts) {
     
-    # Bootstrap function to compute counts for each category
-    bootstrap_counts <- function(data, indices) {
-        resample <- data[indices, ]
-        resampled_counts <- resample %>%
-            group_by(category) %>%
-            summarise(count = n(), .groups = 'drop')
-        
-        # Ensure all categories are present in the resampled counts
-        resampled_counts <- resampled_counts %>%
-            complete(category = 1:length(counts), fill = list(count = 0))
-        
-        return(resampled_counts$count)
+    # make a vector of integers 1, 2, 3 and 4 for the 4 psi's
+    # we round the numbers becuase some estimates of CFs are not integers
+    data <- rep(1:length(counts), round(counts))
+    
+    count_func <- function(data, indices) {
+        sample_data <- data[indices]
+        counts <- c(sum(sample_data == 1), sum(sample_data == 2), sum(sample_data == 3))
+        return(counts)
     }
     
-    # Perform bootstrap resampling
-    results <- boot(data = data, statistic = bootstrap_counts, R = R)
+    # Perform bootstrap
+    results <- boot(data, statistic = count_func, R = 1000)
     
     # Calculate 95% confidence intervals for each category
     ci_results <- tibble(
-        lower_ci_count = apply(results$t, 2, quantile, probs = alpha / 2),
-        upper_ci_count = apply(results$t, 2, quantile, probs = 1 - alpha / 2)
+        lower_ci_count = apply(bootstrap_results$t, 2, quantile, probs = 0.025),
+        upper_ci_count = apply(bootstrap_results$t, 2, quantile, probs = 0.975)
     )
     
     return(ci_results)
