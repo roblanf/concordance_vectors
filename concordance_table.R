@@ -7,7 +7,7 @@ library(boot)
 
 bootstrap_ci_counts <- function(counts, R = 1000, alpha = 0.05) {
     # Convert counts to a data frame for bootstrapping
-    data <- tibble(category = rep(1:length(counts), counts))
+    data <- tibble(category = rep(1:length(counts), round(counts)))
     
     # Bootstrap function to compute counts for each category
     bootstrap_counts <- function(data, indices) {
@@ -24,7 +24,6 @@ bootstrap_ci_counts <- function(counts, R = 1000, alpha = 0.05) {
     }
     
     # Perform bootstrap resampling
-    set.seed(123)  # For reproducibility
     results <- boot(data = data, statistic = bootstrap_counts, R = R)
     
     # Calculate 95% confidence intervals for each category
