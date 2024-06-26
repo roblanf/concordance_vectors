@@ -25,5 +25,5 @@ tree$node.label <- sapply(tree$node.label, function(x) {
 # fix the names
 names(tree$node.label) = treeo$node.label
 
-write.nexus(tree, file = "id_gcf_scf_qcf.tree")
+write.nexus(tree, file = "id_gcf_scf_qcf.nex")
 
