@@ -43,7 +43,7 @@ create_heatmap <- function(branch_id, conc_vectors) {
         select(-ends_with("_N")) %>%
         pivot_longer(cols = everything(), names_to = "type_psi", values_to = "value") %>%
         separate(type_psi, into = c("type", "psi"), sep = "_psi") %>%
-        mutate(type = factor(type, levels = c("gene", "site", "quartet")))
+        mutate(type = factor(type, levels = c("quartet", "site", "gene")))
     
     # Reshape data from wide to long format for counts
     long_data_N <- clade_data %>%
@@ -78,10 +78,12 @@ create_heatmap <- function(branch_id, conc_vectors) {
                ci_label = paste0("(", scales::number(lower_CI, accuracy = 0.001), ", ", 
                                  scales::number(upper_CI, accuracy = 0.001), ")"))
 
+    
     y_labels <- long_data %>%
         select(type, total_counts) %>%
         distinct() %>%
-        mutate(y_label = paste0(type, "<br><span style='font-size:9pt;'>(n=", total_counts, ")</span>")) %>%
+        mutate(y_label = paste0(type, "<br><span style='font-size:8pt;'>(n=", total_counts, ")</span>")) %>%
+        arrange(factor(type, levels = c("quartet", "site", "gene"))) %>% 
         pull(y_label)
     
         
@@ -92,7 +94,7 @@ create_heatmap <- function(branch_id, conc_vectors) {
         geom_text(aes(label = ci_label), color = "black", size = 3, vjust = 1.5) + # Add CI text labels
         scale_fill_gradient(low = "white", high = "red", limits = c(0, 100), name = "proportion") + # Color gradient
         scale_x_discrete(position = 'top', labels = c(bquote(Psi[1]), bquote(Psi[2]), bquote(Psi[3]), bquote(Psi[4]))) +
-        scale_y_discrete(labels = y_labels) + 
+        scale_y_discrete(labels = y_labels) +
         theme_minimal() + # Minimal theme
         ggtitle(paste("Concordance factors for branch ID", branch_id), subtitle = "Values are percentages, numbers in brackets are bootstrap 95% CIs") +
         theme(
