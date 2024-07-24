@@ -4,33 +4,27 @@
 library(tidyverse)
 library(ggplot2)
 library(boot)
+library(ggtext)
 
-bootstrap_ci_counts <- function(counts, R = 1000, alpha = 0.05) {
-    # Convert counts to a data frame for bootstrapping
-    data <- tibble(category = rep(1:length(counts), counts))
+bootstrap_ci_counts <- function(counts) {
     
-    # Bootstrap function to compute counts for each category
-    bootstrap_counts <- function(data, indices) {
-        resample <- data[indices, ]
-        resampled_counts <- resample %>%
-            group_by(category) %>%
-            summarise(count = n(), .groups = 'drop')
-        
-        # Ensure all categories are present in the resampled counts
-        resampled_counts <- resampled_counts %>%
-            complete(category = 1:length(counts), fill = list(count = 0))
-        
-        return(resampled_counts$count)
+    # make a vector of integers 1, 2, 3 and 4 for the 4 psi's
+    # we round the numbers becuase some estimates of CFs are not integers
+    data <- rep(1:length(counts), round(counts))
+    
+    count_func <- function(data, indices) {
+        sample_data <- data[indices]
+        counts <- sapply(1:length(counts), function(x) sum(sample_data == x))
+        return(counts)
     }
     
-    # Perform bootstrap resampling
-    set.seed(123)  # For reproducibility
-    results <- boot(data = data, statistic = bootstrap_counts, R = R)
+    # Perform bootstrap
+    results <- boot(data, statistic = count_func, R = 1000)
     
     # Calculate 95% confidence intervals for each category
     ci_results <- tibble(
-        lower_ci_count = apply(results$t, 2, quantile, probs = alpha / 2),
-        upper_ci_count = apply(results$t, 2, quantile, probs = 1 - alpha / 2)
+        lower_ci_count = apply(results$t, 2, quantile, probs = 0.025),
+        upper_ci_count = apply(results$t, 2, quantile, probs = 0.975)
     )
     
     return(ci_results)
@@ -67,7 +61,9 @@ create_heatmap <- function(branch_id, conc_vectors) {
             ci <- bootstrap_ci_counts(counts)
             ci <- ci %>%
                 mutate(lower_CI = (lower_ci_count / total_counts) * 100,
-                       upper_CI = (upper_ci_count / total_counts) * 100)
+                       upper_CI = (upper_ci_count / total_counts) * 100,
+                       total_counts = total_counts) # Add total_counts to ci
+            
             .x <- .x %>% bind_cols(ci)
             return(.x)
         }) %>%
@@ -76,12 +72,21 @@ create_heatmap <- function(branch_id, conc_vectors) {
     # Add bootstrap CIs to the long_data table in percentage terms
     long_data <- long_data %>%
         mutate(psi = paste0(psi, "_N")) %>%
-        left_join(long_data_N %>% select(type, psi_N, lower_CI, upper_CI), by = c("type", "psi" = "psi_N")) %>%
+        left_join(long_data_N %>% select(type, psi_N, lower_CI, upper_CI, total_counts), by = c("type", "psi" = "psi_N")) %>%
         mutate(psi = str_replace(psi, "_N", ""),
                main_label = scales::number(value, accuracy = 0.001),
                ci_label = paste0("(", scales::number(lower_CI, accuracy = 0.001), ", ", 
                                  scales::number(upper_CI, accuracy = 0.001), ")"))
+
     
+    y_labels <- long_data %>%
+        select(type, total_counts) %>%
+        distinct() %>%
+        mutate(y_label = paste0(type, "<br><span style='font-size:8pt;'>(n=", total_counts, ")</span>")) %>%
+        arrange(factor(type, levels = c("quartet", "site", "gene"))) %>% 
+        pull(y_label)
+    
+        
     # Generate the heatmap
     plot <- ggplot(long_data, aes(x = psi, y = type, fill = value)) +
         geom_tile(color = "white") + # Add tiles with white borders
@@ -89,15 +94,19 @@ create_heatmap <- function(branch_id, conc_vectors) {
         geom_text(aes(label = ci_label), color = "black", size = 3, vjust = 1.5) + # Add CI text labels
         scale_fill_gradient(low = "white", high = "red", limits = c(0, 100), name = "proportion") + # Color gradient
         scale_x_discrete(position = 'top', labels = c(bquote(Psi[1]), bquote(Psi[2]), bquote(Psi[3]), bquote(Psi[4]))) +
+        scale_y_discrete(labels = y_labels) +
         theme_minimal() + # Minimal theme
         ggtitle(paste("Concordance factors for branch ID", branch_id), subtitle = "Values are percentages, numbers in brackets are bootstrap 95% CIs") +
-        theme(plot.title = element_text(size = 24),
-              axis.title = element_blank(), # Remove axis titles
-              axis.text = element_text(size = 16), # Increase axis text size
-              axis.ticks = element_blank(),
-              axis.line = element_blank(),
-              line = element_blank(),
-              legend.position = "bottom") + # Place legend at the bottom
+        theme(
+            plot.title = element_text(size = 24),
+            axis.title = element_blank(), # Remove axis titles
+            axis.text.y = element_markdown(size = 16), # Use element_markdown for y-axis labels
+            axis.text.x = element_text(size = 16), # Increase x-axis text size
+            axis.ticks = element_blank(),
+            axis.line = element_blank(),
+            line = element_blank(),
+            legend.position = "bottom" # Place legend at the bottom
+        ) +
         guides(fill = guide_colourbar(
             title = "Concordance or Discordance factor (%)",
             title.position = "top",
